@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+:root {
+  --bg-deep: #EDE8DF;
+  --bg-surface: #F7F4F0;
+  --bg-elevated: #FFFFFF;
+  --text-primary: #3D3530;
+  --text-muted: #9A8F85;
+  --accent-gold: #6B7A5C;
+  --accent-blue: #6B7A5C;
+  --border: #DDD8D0;
+}
+
+@theme inline {
+  --color-background: var(--bg-deep);
+  --color-foreground: var(--text-primary);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-inter), 'Optima', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+
+/* Font utility classes */
+.font-body    { font-family: var(--font-inter), 'Optima', sans-serif; }
+.font-heading { font-family: var(--font-cormorant), 'Georgia', serif; }
+.font-meta    { font-family: var(--font-cormorant), 'Georgia', serif; font-style: italic; }
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: #C8C2BA;
+  border-radius: 2px;
+}
+
+.prose-trade p { margin: 0 0 0.75em; }
+.prose-trade p:last-child { margin-bottom: 0; }
+.prose-trade ul { margin: 0.5em 0; padding-left: 1.5em; }
+.prose-trade ol { margin: 0.5em 0; padding-left: 1.5em; }
+.prose-trade li { margin: 0.25em 0; }
+.prose-trade strong { color: var(--text-primary); font-weight: 600; }
+.prose-trade em { color: var(--text-muted); }
+.prose-trade code {
+  background: #EDE8DF;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+  font-family: 'Courier New', monospace;
+  color: var(--accent-gold);
+}
+.prose-trade pre {
+  background: #EDE8DF;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1em;
+  overflow-x: auto;
+  margin: 0.75em 0;
+}
+.prose-trade pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.prose-trade h1, .prose-trade h2, .prose-trade h3 {
+  color: var(--text-primary);
+  margin: 0.75em 0 0.4em;
+  font-weight: 600;
+}
+.prose-trade blockquote {
+  border-left: 2px solid var(--accent-gold);
+  padding-left: 1em;
+  color: var(--text-muted);
+  margin: 0.75em 0;
+}
