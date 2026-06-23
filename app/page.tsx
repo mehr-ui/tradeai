@@ -229,7 +229,7 @@ export default function Home() {
                 style={{ height: '50px', width: 'auto', filter: 'brightness(0) saturate(100%) invert(18%) sepia(10%) saturate(800%) hue-rotate(340deg) brightness(90%)' }}
               />
               <p className="text-sm" style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                Where should we begin?
+                What should we build, budget, or schedule?
               </p>
             </div>
           )}
@@ -297,7 +297,7 @@ export default function Home() {
                 value={input}
                 onChange={e => { setInput(e.target.value); autoResize() }}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything about your project…"
+                placeholder="Ask about a budget, timeline, estimate, order, or client update…"
                 disabled={isStreaming}
                 className="flex-1 resize-none bg-transparent text-sm outline-none"
                 style={{ color: 'var(--text-primary)', lineHeight: '1.6', fontFamily: 'var(--font-inter), sans-serif', fontSize: '16px' }}
