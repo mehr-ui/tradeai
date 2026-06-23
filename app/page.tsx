@@ -176,8 +176,8 @@ export default function Home() {
 
         {/* Top bar */}
         <header
-          className="flex-shrink-0 flex items-center gap-3 px-4 md:px-5 py-3 md:py-4 border-b"
-          style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}
+          className="flex-shrink-0 flex items-center gap-3 px-4 md:px-5 py-3 md:py-4 md:border-b"
+          style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)' }}
         >
           {/* Mobile hamburger */}
           <button
@@ -300,7 +300,7 @@ export default function Home() {
                 placeholder="Ask anything about your project…"
                 disabled={isStreaming}
                 className="flex-1 resize-none bg-transparent text-sm outline-none"
-                style={{ color: 'var(--text-primary)', lineHeight: '1.6', fontFamily: 'var(--font-inter), sans-serif' }}
+                style={{ color: 'var(--text-primary)', lineHeight: '1.6', fontFamily: 'var(--font-inter), sans-serif', fontSize: '16px' }}
               />
               <button
                 onClick={() => sendMessage(input)}
