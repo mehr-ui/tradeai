@@ -20,6 +20,11 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: 'The Trade — AI Assistant',
   description: 'Bold solutions for innovative interior design businesses',
+  icons: {
+    icon: '/trade-favicon.png',
+    shortcut: '/trade-favicon.png',
+    apple: '/trade-favicon.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
