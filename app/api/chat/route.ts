@@ -4,11 +4,15 @@ import { NextRequest } from 'next/server'
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
-  const { messages } = await req.json()
+  const { messages, csvFile } = await req.json()
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return new Response('Invalid messages', { status: 400 })
   }
+
+  const csvContext = csvFile
+    ? `\n\n## Uploaded file: ${csvFile.name}\n\nThe user has uploaded a CSV file. Here is its contents:\n\`\`\`\n${csvFile.content}\n\`\`\`\nUse this data to answer questions. The user will tell you what it represents if it isn't obvious from the headers.`
+    : ''
 
   const stream = await client.messages.stream({
     model: 'claude-sonnet-4-6',
@@ -31,7 +35,7 @@ Keep your questions concise — ask only what you genuinely need, grouped in a s
 - Professional but warm — you're a knowledgeable colleague, not a chatbot
 - Use markdown formatting: bold for key terms, bullet points for lists, tables for structured data like budgets
 - Be specific and practical — give real numbers, real timelines, real language professionals can use
-- Never give vague or generic answers when you have enough context to be specific`,
+- Never give vague or generic answers when you have enough context to be specific${csvContext}`,
     messages,
   })
 
