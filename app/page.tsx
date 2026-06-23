@@ -237,8 +237,8 @@ export default function Home() {
 
         {/* Input area — always pinned to bottom */}
         <div
-          className="flex-shrink-0 border-t py-3 md:py-5 px-4 md:px-6"
-          style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}
+          className="flex-shrink-0 py-3 md:py-5 px-4 md:px-6 md:border-t"
+          style={{ borderColor: 'var(--border)', background: 'transparent' }}
         >
 
 
@@ -274,7 +274,7 @@ export default function Home() {
               style={{
                 background: 'var(--bg-elevated)',
                 borderColor: 'var(--border)',
-                boxShadow: '0 1px 4px rgba(61,53,48,0.06)',
+                boxShadow: '0 4px 20px rgba(61,53,48,0.12)',
               }}
             >
               <button
