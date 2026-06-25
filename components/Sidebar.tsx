@@ -10,17 +10,30 @@ const DUMMY_CHATS = [
   { id: 7, title: 'Living room FF&E budget', preview: 'Furniture, fixtures & equipment estimate…', date: 'Jun 12' },
 ]
 
+const QUICK_STARTS = [
+  'Kitchen remodel',
+  'Bathroom remodel',
+  'Plumbing',
+  'Electrical',
+  'HVAC',
+  'Change order',
+  'Client email',
+  'Project schedule',
+]
+
 export default function Sidebar({
   activeId,
   onSelect,
   onNew,
   onClose,
+  onQuickStart,
   isMobile = false,
 }: {
   activeId: number | null
   onSelect: (id: number) => void
   onNew: () => void
   onClose?: () => void
+  onQuickStart?: (topic: string) => void
   isMobile?: boolean
 }) {
   const today = DUMMY_CHATS.filter(c => c.date === 'Today')
@@ -93,6 +106,47 @@ export default function Sidebar({
           </button>
         )}
       </div>
+
+      {/* Mobile quick start chips */}
+      {isMobile && (
+        <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
+            Quick start
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_STARTS.map(topic => (
+              <button
+                key={topic}
+                onClick={() => {
+                  if (onQuickStart) onQuickStart(topic)
+                  if (onClose) onClose()
+                }}
+                className="text-xs px-3 py-1.5 rounded-full border transition-all duration-150"
+                style={{
+                  borderColor: 'var(--border)',
+                  color: 'var(--text-primary)',
+                  background: 'var(--bg-elevated)',
+                  fontFamily: 'var(--font-inter), sans-serif',
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.background = '#6B7A5C'
+                  el.style.color = '#F7F4F0'
+                  el.style.borderColor = '#6B7A5C'
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.background = 'var(--bg-elevated)'
+                  el.style.color = 'var(--text-primary)'
+                  el.style.borderColor = 'var(--border)'
+                }}
+              >
+                {topic}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Desktop new chat button */}
       {!isMobile && (

@@ -189,6 +189,11 @@ export default function Home() {
               onSelect={handleSelectChat}
               onNew={handleNew}
               onClose={() => setMobileSidebarOpen(false)}
+              onQuickStart={(topic) => {
+                handleNew()
+                setInput(`Help me with a ${topic.toLowerCase()} project`)
+                setTimeout(() => textareaRef.current?.focus(), 100)
+              }}
               isMobile
             />
           </div>
