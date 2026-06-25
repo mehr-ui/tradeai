@@ -258,7 +258,7 @@ export default function Home() {
                 style={{ height: '50px', width: 'auto', filter: 'brightness(0) saturate(100%) invert(18%) sepia(10%) saturate(800%) hue-rotate(340deg) brightness(90%)' }}
               />
               <p className="text-sm" style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                What should we build, budget, or schedule?
+                A planning tool for interior designers, architects, builders, and other tradespeople.
               </p>
             </div>
           )}
