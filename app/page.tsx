@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import ChatMessage, { Message } from '@/components/ChatMessage'
+import ChatMessage, { Message, ImageAttachment } from '@/components/ChatMessage'
 import TypingIndicator from '@/components/TypingIndicator'
 import Sidebar from '@/components/Sidebar'
 
@@ -23,9 +23,11 @@ export default function Home() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [csvFile, setCsvFile] = useState<{ name: string; content: string } | null>(null)
   const [csvError, setCsvError] = useState<string | null>(null)
+  const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const hasMessages = messages.length > 0
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -59,12 +61,28 @@ export default function Home() {
     ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'
   }
 
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    files.forEach(file => {
+      if (!file.type.startsWith('image/')) return
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string
+        const base64 = dataUrl.split(',')[1]
+        setPendingImages(prev => [...prev, { data: base64, mediaType: file.type, name: file.name }])
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = ''
+  }
+
   function handleNew() {
     setMessages([])
     setInput('')
     setActiveChat(null)
     setCsvFile(null)
     setCsvError(null)
+    setPendingImages([])
   }
 
   function handleSelectChat(id: number) {
@@ -73,16 +91,22 @@ export default function Home() {
     setInput('')
     setCsvFile(null)
     setCsvError(null)
+    setPendingImages([])
   }
 
   async function sendMessage(text: string) {
     const trimmed = text.trim()
     if (!trimmed || isStreaming) return
 
-    const userMessage: Message = { role: 'user', content: trimmed }
+    const userMessage: Message = {
+      role: 'user',
+      content: trimmed,
+      images: pendingImages.length > 0 ? [...pendingImages] : undefined,
+    }
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
     setInput('')
+    setPendingImages([])
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setIsStreaming(true)
 
@@ -267,6 +291,30 @@ export default function Home() {
             )}
 
             <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileSelect} />
+            <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
+
+            {/* Pending image previews */}
+            {pendingImages.length > 0 && (
+              <div className="flex flex-wrap gap-2 max-w-2xl mx-auto w-full">
+                {pendingImages.map((img, i) => (
+                  <div key={i} className="relative">
+                    <img
+                      src={`data:${img.mediaType};base64,${img.data}`}
+                      alt={img.name}
+                      className="w-16 h-16 object-cover rounded-lg"
+                      style={{ border: '1px solid var(--border)' }}
+                    />
+                    <button
+                      onClick={() => setPendingImages(prev => prev.filter((_, j) => j !== i))}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-xs"
+                      style={{ background: 'var(--text-primary)', color: 'var(--bg-surface)' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Input box */}
             <div
@@ -277,6 +325,7 @@ export default function Home() {
                 boxShadow: '0 4px 20px rgba(61,53,48,0.12)',
               }}
             >
+              {/* CSV upload button */}
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isStreaming}
@@ -289,6 +338,23 @@ export default function Home() {
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M7 2v6M4 5l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M2 10h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+
+              {/* Image upload button */}
+              <button
+                onClick={() => imageInputRef.current?.click()}
+                disabled={isStreaming}
+                title="Upload image"
+                className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-colors disabled:opacity-30"
+                style={{ color: pendingImages.length > 0 ? '#6B7A5C' : 'var(--text-muted)', background: 'var(--bg-deep)' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6B7A5C'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = pendingImages.length > 0 ? '#6B7A5C' : 'var(--text-muted)'}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <rect x="1" y="2.5" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+                  <circle cx="4.5" cy="5.5" r="1" fill="currentColor"/>
+                  <path d="M1 9l3-3 2.5 2.5L9 6l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
               <textarea
