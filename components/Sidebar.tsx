@@ -1,5 +1,8 @@
 'use client'
 
+import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
+
 const DUMMY_CHATS = [
   { id: 1, title: 'Kitchen remodel budget', preview: "Here's a breakdown for a mid-range kitchen…", date: 'Today' },
   { id: 2, title: 'Bathroom renovation schedule', preview: 'Week 1–2: Demo and rough plumbing…', date: 'Today' },
@@ -21,6 +24,8 @@ const QUICK_STARTS = [
   'Project schedule',
 ]
 
+type Conversation = { id: string; title: string; updated_at: string }
+
 export default function Sidebar({
   activeId,
   onSelect,
@@ -28,19 +33,36 @@ export default function Sidebar({
   onClose,
   onQuickStart,
   isMobile = false,
+  userEmail,
+  conversations = [],
 }: {
-  activeId: number | null
-  onSelect: (id: number) => void
+  activeId: string | null
+  onSelect: (id: string) => void
   onNew: () => void
   onClose?: () => void
   onQuickStart?: (topic: string) => void
   isMobile?: boolean
+  userEmail?: string
+  conversations?: Conversation[]
 }) {
-  const today = DUMMY_CHATS.filter(c => c.date === 'Today')
-  const yesterday = DUMMY_CHATS.filter(c => c.date === 'Yesterday')
-  const older = DUMMY_CHATS.filter(c => c.date !== 'Today' && c.date !== 'Yesterday')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const now = new Date()
+  const today = conversations.filter(c => {
+    const d = new Date(c.updated_at)
+    return d.toDateString() === now.toDateString()
+  })
+  const yesterday = conversations.filter(c => {
+    const d = new Date(c.updated_at)
+    const y = new Date(now); y.setDate(y.getDate() - 1)
+    return d.toDateString() === y.toDateString()
+  })
+  const older = conversations.filter(c => {
+    const d = new Date(c.updated_at)
+    const y = new Date(now); y.setDate(y.getDate() - 1)
+    return d.toDateString() !== now.toDateString() && d.toDateString() !== y.toDateString()
+  })
 
-  function ChatItem({ chat }: { chat: typeof DUMMY_CHATS[0] }) {
+  function ChatItem({ chat }: { chat: Conversation }) {
     const isActive = chat.id === activeId
     return (
       <button
@@ -54,18 +76,13 @@ export default function Sidebar({
         onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
       >
         <div className="text-sm truncate" style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 500 }}>
-          {chat.title}
+          {chat.title || 'Untitled'}
         </div>
-        {!isMobile && (
-          <div className="text-xs truncate mt-0.5" style={{ color: isActive ? 'rgba(247,244,240,0.65)' : 'var(--text-muted)', fontSize: '11px' }}>
-            {chat.preview}
-          </div>
-        )}
       </button>
     )
   }
 
-  function Section({ label, chats }: { label: string; chats: typeof DUMMY_CHATS }) {
+  function Section({ label, chats }: { label: string; chats: Conversation[] }) {
     if (!chats.length) return null
     return (
       <div className="mb-4">
@@ -189,12 +206,50 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Desktop footer */}
+      {/* Desktop footer — user menu */}
       {!isMobile && (
-        <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-          <div style={{ fontStyle: 'italic', fontSize: '11px', fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-            Bold solutions for innovative<br />interior design businesses
-          </div>
+        <div className="px-3 py-3 border-t relative" style={{ borderColor: 'var(--border)' }}>
+          {menuOpen && (
+            <div
+              className="absolute bottom-14 left-3 right-3 rounded-xl py-1 shadow-lg"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+            >
+              {userEmail && (
+                <div className="px-4 py-2 text-xs truncate" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
+                  {userEmail}
+                </div>
+              )}
+              <div style={{ borderTop: '1px solid var(--border)' }} />
+              <button
+                onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
+                className="w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors"
+                style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-inter), sans-serif' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E8E3DA'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              >
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                  <path d="M3 7.5h9M8.5 4l3.5 3.5L8.5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M6 2H2.5A1.5 1.5 0 0 0 1 3.5v8A1.5 1.5 0 0 0 2.5 13H6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                Log out
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors"
+            style={{ fontFamily: 'var(--font-inter), sans-serif' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E8E3DA'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+          >
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+              style={{ background: 'var(--text-primary)', color: 'var(--bg-surface)' }}>
+              {userEmail ? userEmail[0].toUpperCase() : 'U'}
+            </div>
+            <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+              {userEmail ?? 'Account'}
+            </span>
+          </button>
         </div>
       )}
     </div>

@@ -4,6 +4,9 @@ import { useState, useRef, useEffect } from 'react'
 import ChatMessage, { Message, ImageAttachment } from '@/components/ChatMessage'
 import TypingIndicator from '@/components/TypingIndicator'
 import Sidebar from '@/components/Sidebar'
+import { supabase } from '@/lib/supabase'
+import { getConversations, createConversation } from '@/lib/db/conversations'
+import { getMessages, saveMessage } from '@/lib/db/messages'
 
 const EXAMPLE_PROMPTS = [
   'Help me put together a budget for a kitchen remodel',
@@ -18,12 +21,15 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const [activeChat, setActiveChat] = useState<number | null>(null)
+  const [activeChat, setActiveChat] = useState<string | null>(null)
+  const [conversations, setConversations] = useState<{ id: string; title: string; updated_at: string }[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [csvFile, setCsvFile] = useState<{ name: string; content: string } | null>(null)
   const [csvError, setCsvError] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([])
+  const [userEmail, setUserEmail] = useState<string | undefined>()
+  const [userId, setUserId] = useState<string | undefined>()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -53,6 +59,16 @@ export default function Home() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isStreaming])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return
+      setUserEmail(data.user.email)
+      setUserId(data.user.id)
+      const convos = await getConversations(data.user.id)
+      setConversations(convos)
+    })
+  }, [])
 
   function autoResize() {
     const ta = textareaRef.current
@@ -85,13 +101,14 @@ export default function Home() {
     setPendingImages([])
   }
 
-  function handleSelectChat(id: number) {
+  async function handleSelectChat(id: string) {
     setActiveChat(id)
-    setMessages([])
     setInput('')
     setCsvFile(null)
     setCsvError(null)
     setPendingImages([])
+    const msgs = await getMessages(id)
+    setMessages(msgs.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content ?? '' })))
   }
 
   async function sendMessage(text: string) {
@@ -110,6 +127,21 @@ export default function Home() {
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setIsStreaming(true)
 
+    // Create a new conversation in the DB on the first message
+    let currentChatId = activeChat
+    if (!currentChatId && userId) {
+      const title = trimmed.slice(0, 60)
+      const convo = await createConversation(userId, title)
+      currentChatId = convo.id
+      setActiveChat(convo.id)
+      setConversations(prev => [convo, ...prev])
+    }
+
+    // Save the user message to the DB
+    if (currentChatId) {
+      await saveMessage(currentChatId, 'user', trimmed)
+    }
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -124,11 +156,13 @@ export default function Home() {
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
+      let assistantText = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         const chunk = decoder.decode(value, { stream: true })
+        assistantText += chunk
         setMessages(prev => {
           const updated = [...prev]
           updated[updated.length - 1] = {
@@ -137,6 +171,11 @@ export default function Home() {
           }
           return updated
         })
+      }
+
+      // Save the assistant message to the DB
+      if (currentChatId) {
+        await saveMessage(currentChatId, 'assistant', assistantText)
       }
     } catch {
       setMessages(prev => [
@@ -169,7 +208,7 @@ export default function Home() {
       {/* ── DESKTOP sidebar (hidden on mobile) ── */}
       <div className="hidden md:flex flex-col flex-shrink-0">
         {sidebarOpen && (
-          <Sidebar activeId={activeChat} onSelect={handleSelectChat} onNew={handleNew} />
+          <Sidebar activeId={activeChat} onSelect={handleSelectChat} onNew={handleNew} userEmail={userEmail} conversations={conversations} />
         )}
       </div>
 
@@ -189,6 +228,7 @@ export default function Home() {
               onSelect={handleSelectChat}
               onNew={handleNew}
               onClose={() => setMobileSidebarOpen(false)}
+              conversations={conversations}
               onQuickStart={(topic) => {
                 handleNew()
                 setInput(`Help me with a ${topic.toLowerCase()} project`)
