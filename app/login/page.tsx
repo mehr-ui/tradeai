@@ -25,7 +25,7 @@ export default function LoginPage() {
       console.log('Auth error:', error)
       setError(typeof error === 'string' ? error : (error as any).message ?? JSON.stringify(error))
     } else {
-      window.location.href = '/'
+      window.location.href = isSignUp ? '/welcome' : '/'
     }
 
     setLoading(false)
