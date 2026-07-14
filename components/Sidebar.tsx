@@ -2,27 +2,23 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import '@/components/onboarding/onboarding.css'
 
-const DUMMY_CHATS = [
-  { id: 1, title: 'Kitchen remodel budget', preview: "Here's a breakdown for a mid-range kitchen…", date: 'Today' },
-  { id: 2, title: 'Bathroom renovation schedule', preview: 'Week 1–2: Demo and rough plumbing…', date: 'Today' },
-  { id: 3, title: 'Client delay email draft', preview: 'Subject: Project Update — Revised Timeline…', date: 'Yesterday' },
-  { id: 4, title: 'Change order — electrical', preview: 'Change Order #004: Additional recessed…', date: 'Yesterday' },
-  { id: 5, title: 'Master bath tile selection', preview: "For a cohesive look, I'd recommend…", date: 'Jun 15' },
-  { id: 6, title: 'Contractor payment schedule', preview: 'A standard draw schedule typically…', date: 'Jun 14' },
-  { id: 7, title: 'Living room FF&E budget', preview: 'Furniture, fixtures & equipment estimate…', date: 'Jun 12' },
-]
-
-const QUICK_STARTS = [
-  'Kitchen remodel',
-  'Bathroom remodel',
-  'Plumbing',
-  'Electrical',
-  'HVAC',
-  'Change order',
-  'Client email',
-  'Project schedule',
-]
+const T = {
+  paper: '#F4EDE1',
+  panel: '#F8F3EA',
+  ink: '#2C2621',
+  inkSoft: '#6A6055',
+  inkFaint: '#9A9083',
+  clay: '#B0552F',
+  clayDeep: '#8F401F',
+  line: 'rgba(44,38,33,0.14)',
+  lineSoft: 'rgba(44,38,33,0.08)',
+  brandBg: '#3A2A24',
+  brandInk: '#F6EFE3',
+  serif: '"Cormorant Garamond", Georgia, serif',
+  sans: '"Instrument Sans", system-ui, sans-serif',
+}
 
 type Conversation = { id: string; title: string; updated_at: string }
 
@@ -46,212 +42,150 @@ export default function Sidebar({
   conversations?: Conversation[]
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const now = new Date()
-  const today = conversations.filter(c => {
-    const d = new Date(c.updated_at)
-    return d.toDateString() === now.toDateString()
-  })
-  const yesterday = conversations.filter(c => {
-    const d = new Date(c.updated_at)
-    const y = new Date(now); y.setDate(y.getDate() - 1)
-    return d.toDateString() === y.toDateString()
-  })
-  const older = conversations.filter(c => {
-    const d = new Date(c.updated_at)
-    const y = new Date(now); y.setDate(y.getDate() - 1)
-    return d.toDateString() !== now.toDateString() && d.toDateString() !== y.toDateString()
-  })
-
-  function ChatItem({ chat }: { chat: Conversation }) {
-    const isActive = chat.id === activeId
-    return (
-      <button
-        onClick={() => { onSelect(chat.id); if (isMobile && onClose) onClose() }}
-        className="w-full text-left px-3 py-3 rounded-lg transition-all duration-150"
-        style={{
-          background: isActive ? '#6B7A5C' : 'transparent',
-          color: isActive ? '#F7F4F0' : 'var(--text-primary)',
-        }}
-        onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#E8E3DA' }}
-        onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-      >
-        <div className="text-sm truncate" style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 500 }}>
-          {chat.title || 'Untitled'}
-        </div>
-      </button>
-    )
-  }
-
-  function Section({ label, chats }: { label: string; chats: Conversation[] }) {
-    if (!chats.length) return null
-    return (
-      <div className="mb-4">
-        <div className="px-3 mb-1 text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-          {label}
-        </div>
-        <div className="flex flex-col gap-0.5">
-          {chats.map(c => <ChatItem key={c.id} chat={c} />)}
-        </div>
-      </div>
-    )
-  }
+  const initial = userEmail ? userEmail[0].toUpperCase() : 'U'
 
   return (
-    <div
-      className="flex flex-col h-full border-r"
-      style={{
-        width: isMobile ? '80vw' : '256px',
-        maxWidth: isMobile ? '320px' : '256px',
-        background: 'var(--bg-surface)',
-        borderColor: 'var(--border)',
-      }}
-    >
-      {/* Header */}
-      <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-        <img
-          src="/logo.svg"
-          alt="The Trade"
-          style={{ height: '24px', width: 'auto', filter: 'brightness(0) saturate(100%) invert(18%) sepia(10%) saturate(800%) hue-rotate(340deg) brightness(90%)' }}
-        />
+    <div style={{
+      width: isMobile ? '80vw' : '260px',
+      maxWidth: isMobile ? '320px' : '260px',
+      background: T.paper,
+      borderRight: `1px solid ${T.line}`,
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      padding: '22px 14px 14px',
+      fontFamily: T.sans,
+    }}>
+
+      {/* Wordmark */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '4px 8px 22px' }}>
+        <span style={{
+          width: 28, height: 28, border: `1.5px solid ${T.line}`, borderRadius: '50%',
+          display: 'grid', placeItems: 'center', flexShrink: 0,
+        }}>
+          <span style={{ width: 9, height: 9, background: T.clay, borderRadius: '50%' }} />
+        </span>
+        <span style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 600, letterSpacing: '0.01em', color: T.ink }}>
+          The&nbsp;Trade
+        </span>
         {isMobile && onClose && (
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors"
-            style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: T.inkFaint, padding: 4 }}
           >
-            ✕
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
           </button>
         )}
       </div>
 
-      {/* Mobile quick start chips */}
-      {isMobile && (
-        <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-          <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
-            Quick start
+      {/* New conversation button */}
+      <button
+        onClick={() => { onNew(); if (isMobile && onClose) onClose() }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '11px 14px', border: `1.5px solid ${T.line}`,
+          borderRadius: 999, color: T.ink, fontSize: 13.5, fontWeight: 500,
+          background: 'transparent', cursor: 'pointer', fontFamily: T.sans,
+          transition: 'background .25s, border-color .25s',
+        }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.background = `rgba(176,85,47,0.06)`
+          ;(e.currentTarget as HTMLElement).style.borderColor = `rgba(176,85,47,0.5)`
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.background = 'transparent'
+          ;(e.currentTarget as HTMLElement).style.borderColor = T.line
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.clay} strokeWidth="1.9">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        New conversation
+      </button>
+
+      {/* History */}
+      <div style={{ marginTop: 26, flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {conversations.length > 0 && (
+          <div style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: T.inkFaint, padding: '4px 10px 10px' }}>
+            Recent
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {QUICK_STARTS.map(topic => (
+        )}
+        <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {conversations.map(c => {
+            const isActive = c.id === activeId
+            return (
               <button
-                key={topic}
-                onClick={() => {
-                  if (onQuickStart) onQuickStart(topic)
-                  if (onClose) onClose()
-                }}
-                className="text-xs px-3 py-1.5 rounded-full border transition-all duration-150"
+                key={c.id}
+                onClick={() => { onSelect(c.id); if (isMobile && onClose) onClose() }}
                 style={{
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                  background: 'var(--bg-elevated)',
-                  fontFamily: 'var(--font-inter), sans-serif',
+                  padding: '9px 11px', borderRadius: 6, fontSize: 13.5,
+                  color: isActive ? T.clayDeep : T.inkSoft,
+                  background: isActive ? 'rgba(176,85,47,0.10)' : 'transparent',
+                  border: 'none', cursor: 'pointer', textAlign: 'left',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  fontFamily: T.sans, transition: 'background .2s, color .2s',
                 }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = '#6B7A5C'
-                  el.style.color = '#F7F4F0'
-                  el.style.borderColor = '#6B7A5C'
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = 'var(--bg-elevated)'
-                  el.style.color = 'var(--text-primary)'
-                  el.style.borderColor = 'var(--border)'
-                }}
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(44,38,33,0.05)' }}
+                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
               >
-                {topic}
+                {c.title || 'Untitled'}
               </button>
-            ))}
-          </div>
+            )
+          })}
         </div>
-      )}
-
-      {/* Desktop new chat button */}
-      {!isMobile && (
-        <div className="px-2 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-          <button
-            onClick={onNew}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150"
-            style={{ color: 'var(--text-primary)', background: 'transparent' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#E8E3DA' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M12.5 2.5a1.5 1.5 0 0 1 2.121 2.121l-8.5 8.5-2.829.707.707-2.828 8.5-8.5z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: '13.5px', fontWeight: 500 }}>New chat</span>
-          </button>
-        </div>
-      )}
-
-      {/* Chat list */}
-      <div className="flex-1 overflow-y-auto px-2 py-3">
-        <Section label="Today" chats={today} />
-        <Section label="Yesterday" chats={yesterday} />
-        <Section label="Earlier" chats={older} />
       </div>
 
-      {/* Mobile new chat pill button */}
-      {isMobile && (
-        <div className="px-4 py-5 border-t" style={{ borderColor: 'var(--border)' }}>
-          <button
-            onClick={() => { onNew(); if (onClose) onClose() }}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-all"
-            style={{ background: 'var(--text-primary)', color: 'var(--bg-surface)', fontFamily: 'var(--font-inter), sans-serif' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            New chat
-          </button>
-        </div>
-      )}
-
-      {/* Desktop footer — user menu */}
-      {!isMobile && (
-        <div className="px-3 py-3 border-t relative" style={{ borderColor: 'var(--border)' }}>
-          {menuOpen && (
-            <div
-              className="absolute bottom-14 left-3 right-3 rounded-xl py-1 shadow-lg"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+      {/* Account footer */}
+      <div style={{ borderTop: `1px solid ${T.line}`, paddingTop: 14, marginTop: 10, position: 'relative' }}>
+        {menuOpen && (
+          <div style={{
+            position: 'absolute', bottom: 56, left: 0, right: 0,
+            background: T.paper, border: `1px solid ${T.line}`,
+            borderRadius: 8, padding: '4px 0', boxShadow: '0 8px 24px rgba(44,38,33,0.12)',
+          }}>
+            {userEmail && (
+              <div style={{ padding: '8px 14px', fontSize: 11, color: T.inkFaint, fontFamily: T.sans, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {userEmail}
+              </div>
+            )}
+            <div style={{ height: 1, background: T.line }} />
+            <button
+              onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
+              style={{
+                width: '100%', textAlign: 'left', padding: '10px 14px', fontSize: 13.5,
+                color: T.ink, background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: T.sans, display: 'flex', alignItems: 'center', gap: 10,
+              }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(44,38,33,0.05)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >
-              {userEmail && (
-                <div className="px-4 py-2 text-xs truncate" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
-                  {userEmail}
-                </div>
-              )}
-              <div style={{ borderTop: '1px solid var(--border)' }} />
-              <button
-                onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
-                className="w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors"
-                style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-inter), sans-serif' }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E8E3DA'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-              >
-                <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                  <path d="M3 7.5h9M8.5 4l3.5 3.5L8.5 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M6 2H2.5A1.5 1.5 0 0 0 1 3.5v8A1.5 1.5 0 0 0 2.5 13H6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
-                Log out
-              </button>
-            </div>
-          )}
-          <button
-            onClick={() => setMenuOpen(o => !o)}
-            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors"
-            style={{ fontFamily: 'var(--font-inter), sans-serif' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E8E3DA'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-          >
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-              style={{ background: 'var(--text-primary)', color: 'var(--bg-surface)' }}>
-              {userEmail ? userEmail[0].toUpperCase() : 'U'}
-            </div>
-            <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-              {userEmail ?? 'Account'}
-            </span>
-          </button>
-        </div>
-      )}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+              </svg>
+              Sign out
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setMenuOpen(o => !o)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          }}
+        >
+          <span style={{
+            width: 30, height: 30, borderRadius: '50%', background: T.clay, color: T.brandInk,
+            display: 'grid', placeItems: 'center', fontSize: 12.5, fontWeight: 600, flexShrink: 0,
+          }}>
+            {initial}
+          </span>
+          <span style={{ fontSize: 12.5, color: T.inkSoft, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: T.sans }}>
+            {userEmail ?? 'Account'}
+          </span>
+        </button>
+      </div>
     </div>
   )
 }

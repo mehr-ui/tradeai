@@ -7,15 +7,39 @@ import Sidebar from '@/components/Sidebar'
 import { supabase } from '@/lib/supabase'
 import { getConversations, createConversation } from '@/lib/db/conversations'
 import { getMessages, saveMessage } from '@/lib/db/messages'
+import '@/components/onboarding/onboarding.css'
 
-const EXAMPLE_PROMPTS = [
-  'Help me put together a budget for a kitchen remodel',
-  'Create a project schedule for a bathroom renovation',
-  'Draft a client update email about a two-week delay',
-  'Write a change order for some added electrical work',
+const T = {
+  paper: '#F4EDE1',
+  panel: '#F8F3EA',
+  raised: '#FCF8F0',
+  ink: '#2C2621',
+  inkSoft: '#6A6055',
+  inkFaint: '#9A9083',
+  clay: '#B0552F',
+  clayDeep: '#8F401F',
+  brandInk: '#F6EFE3',
+  line: 'rgba(44,38,33,0.14)',
+  lineSoft: 'rgba(44,38,33,0.08)',
+  serif: '"Cormorant Garamond", Georgia, serif',
+  sans: '"Instrument Sans", system-ui, sans-serif',
+}
+
+const PROMPTS = [
+  { text: 'Help me put together a budget for a kitchen remodel', path: 'M3 3v18h18M8 17V9M13 17V5M18 17v-6' },
+  { text: 'Create a project schedule for a bathroom renovation', path: 'M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z' },
+  { text: 'Draft a client update email about a two-week delay', path: 'M4 4h16v12H5.2L4 17.2V4z' },
+  { text: 'Write a change order for some added electrical work', path: 'M13 2L3 14h7v8l10-12h-7V2z' },
 ]
 
 const MAX_CSV_ROWS = 500
+
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 18) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -23,12 +47,12 @@ export default function Home() {
   const [isStreaming, setIsStreaming] = useState(false)
   const [activeChat, setActiveChat] = useState<string | null>(null)
   const [conversations, setConversations] = useState<{ id: string; title: string; updated_at: string }[]>([])
-  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [csvFile, setCsvFile] = useState<{ name: string; content: string } | null>(null)
   const [csvError, setCsvError] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([])
   const [userEmail, setUserEmail] = useState<string | undefined>()
+  const [userName, setUserName] = useState<string | undefined>()
   const [userId, setUserId] = useState<string | undefined>()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -40,7 +64,6 @@ export default function Home() {
     const file = e.target.files?.[0]
     if (!file) return
     setCsvError(null)
-
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target?.result as string
@@ -52,7 +75,6 @@ export default function Home() {
       setCsvFile({ name: file.name, content: text })
     }
     reader.readAsText(file)
-    // reset so the same file can be re-uploaded
     e.target.value = ''
   }
 
@@ -65,8 +87,14 @@ export default function Home() {
       if (!data.user) return
       setUserEmail(data.user.email)
       setUserId(data.user.id)
-      const convos = await getConversations(data.user.id)
-      setConversations(convos)
+      try {
+        const convos = await getConversations(data.user.id)
+        setConversations(convos)
+      } catch { /* non-fatal */ }
+      try {
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', data.user.id).single()
+        if (profile?.full_name) setUserName(profile.full_name.split(' ')[0])
+      } catch { /* non-fatal */ }
     })
   }, [])
 
@@ -127,22 +155,20 @@ export default function Home() {
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setIsStreaming(true)
 
-    // Create a new conversation in the DB on the first message
-    let currentChatId = activeChat
-    if (!currentChatId && userId) {
-      const title = trimmed.slice(0, 60)
-      const convo = await createConversation(userId, title)
-      currentChatId = convo.id
-      setActiveChat(convo.id)
-      setConversations(prev => [convo, ...prev])
-    }
-
-    // Save the user message to the DB
-    if (currentChatId) {
-      await saveMessage(currentChatId, 'user', trimmed)
-    }
-
     try {
+      let currentChatId = activeChat
+      if (!currentChatId && userId) {
+        const title = trimmed.slice(0, 60)
+        const convo = await createConversation(userId, title)
+        currentChatId = convo.id
+        setActiveChat(convo.id)
+        setConversations(prev => [convo, ...prev])
+      }
+
+      if (currentChatId) {
+        await saveMessage(currentChatId, 'user', trimmed)
+      }
+
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,7 +199,6 @@ export default function Home() {
         })
       }
 
-      // Save the assistant message to the DB
       if (currentChatId) {
         await saveMessage(currentChatId, 'assistant', assistantText)
       }
@@ -194,92 +219,72 @@ export default function Home() {
     }
   }
 
-  const HamburgerIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <rect x="2" y="4" width="14" height="1.4" rx="0.7" fill="currentColor"/>
-      <rect x="2" y="8.3" width="14" height="1.4" rx="0.7" fill="currentColor"/>
-      <rect x="2" y="12.6" width="14" height="1.4" rx="0.7" fill="currentColor"/>
-    </svg>
-  )
+  const greeting = `${getGreeting()}, ${userName ?? 'there'}.`
 
   return (
-    <div className="flex h-full" style={{ background: 'var(--bg-deep)' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', height: '100vh', background: T.paper, fontFamily: T.sans }}>
 
-      {/* ── DESKTOP sidebar (hidden on mobile) ── */}
-      <div className="hidden md:flex flex-col flex-shrink-0">
-        {sidebarOpen && (
-          <Sidebar activeId={activeChat} onSelect={handleSelectChat} onNew={handleNew} userEmail={userEmail} conversations={conversations} />
-        )}
+      {/* ── DESKTOP SIDEBAR ── */}
+      <div className="hidden md:flex flex-col">
+        <Sidebar
+          activeId={activeChat}
+          onSelect={handleSelectChat}
+          onNew={handleNew}
+          userEmail={userEmail}
+          conversations={conversations}
+        />
       </div>
 
-      {/* ── MOBILE sidebar drawer + backdrop ── */}
+      {/* ── MOBILE SIDEBAR DRAWER ── */}
       {mobileSidebarOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          {/* Backdrop */}
           <div
-            className="absolute inset-0"
-            style={{ background: 'rgba(0,0,0,0.3)' }}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(44,38,33,0.35)' }}
             onClick={() => setMobileSidebarOpen(false)}
           />
-          {/* Drawer */}
-          <div className="relative z-10 h-full">
+          <div style={{ position: 'relative', zIndex: 10, height: '100%' }}>
             <Sidebar
               activeId={activeChat}
               onSelect={handleSelectChat}
               onNew={handleNew}
               onClose={() => setMobileSidebarOpen(false)}
               conversations={conversations}
-              onQuickStart={(topic) => {
-                handleNew()
-                setInput(`Help me with a ${topic.toLowerCase()} project`)
-                setTimeout(() => textareaRef.current?.focus(), 100)
-              }}
               isMobile
             />
           </div>
         </div>
       )}
 
-      {/* ── Main area ── */}
-      <div className="flex flex-col flex-1 min-w-0">
+      {/* ── MAIN ── */}
+      <main style={{ position: 'relative', background: T.panel, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Top bar */}
-        <header
-          className="flex-shrink-0 flex items-center gap-3 px-4 md:px-5 py-3 md:py-4 md:border-b"
-          style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)' }}
-        >
+        <header style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 28px', borderBottom: `1px solid ${T.lineSoft}`, flexShrink: 0 }}>
           {/* Mobile hamburger */}
           <button
+            className="md:hidden"
             onClick={() => setMobileSidebarOpen(true)}
-            className="md:hidden p-2 rounded-full transition-colors"
-            style={{ color: 'var(--text-muted)', background: 'var(--bg-elevated)' }}
+            style={{ width: 34, height: 34, borderRadius: 3, display: 'grid', placeItems: 'center', color: T.inkSoft, background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            <HamburgerIcon />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
           </button>
-
-          {/* Desktop hamburger */}
-          <button
-            onClick={() => setSidebarOpen(o => !o)}
-            className="hidden md:flex p-1.5 rounded-md transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--border)'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-          >
-            <HamburgerIcon />
-          </button>
-
-          <div
-            className="hidden md:block text-sm tracking-widest uppercase"
-            style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}
-          >
-            {activeChat ? 'Conversation' : 'New Conversation'}
-          </div>
+          {/* Desktop hamburger icon */}
+          <span className="hidden md:grid" style={{ width: 34, height: 34, borderRadius: 3, placeItems: 'center', color: T.inkSoft }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </span>
+          <span style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.inkSoft }}>
+            {activeChat ? 'Conversation' : 'New conversation'}
+          </span>
         </header>
 
-        {/* Messages area — also holds empty state logo on mobile */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Messages / Empty state */}
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {hasMessages ? (
-            <div className="w-full max-w-2xl mx-auto px-4 md:px-6 py-4 md:py-8 flex flex-col gap-4 md:gap-6">
+            <div style={{ width: '100%', maxWidth: 720, margin: '0 auto', padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
               {messages.map((msg, i) => (
                 <ChatMessage key={i} message={msg} />
               ))}
@@ -289,180 +294,195 @@ export default function Home() {
               <div ref={messagesEndRef} />
             </div>
           ) : (
-            /* Empty state logo — centered in the content area */
-            <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <img
-                src="/logo.svg"
-                alt="The Trade"
-                className="mx-auto mb-4"
-                style={{ height: '50px', width: 'auto', filter: 'brightness(0) saturate(100%) invert(18%) sepia(10%) saturate(800%) hue-rotate(340deg) brightness(90%)' }}
-              />
-              <p className="text-sm" style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                A planning tool for interior designers, architects, builders, and other tradespeople.
-              </p>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 28px' }}>
+              <div style={{ width: '100%', maxWidth: 720, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
+                {/* Logotype */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 16 }}>
+                  <span style={{ width: 40, height: 1, background: T.line }} />
+                  <span style={{ fontSize: 10.5, letterSpacing: '0.34em', textTransform: 'uppercase', color: T.clay }}>The Trade</span>
+                  <span style={{ width: 40, height: 1, background: T.line }} />
+                </div>
+
+                <h1 style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 40, lineHeight: 1.05, letterSpacing: '-0.01em', margin: 0, textAlign: 'center', color: T.ink }}>
+                  {greeting}
+                </h1>
+                <p style={{ fontSize: 14.5, color: T.inkSoft, lineHeight: 1.6, margin: '12px 0 0', textAlign: 'center', maxWidth: 440 }}>
+                  Your planning partner for budgets, schedules, client updates, and change orders. What are we working on?
+                </p>
+
+                {/* Suggestion pills */}
+                <div style={{ width: '100%', maxWidth: 640, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginTop: 34 }}>
+                  {PROMPTS.map(p => (
+                    <button
+                      key={p.text}
+                      onClick={() => sendMessage(p.text)}
+                      disabled={isStreaming}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 9,
+                        padding: '9px 16px', background: T.raised,
+                        border: `1px solid ${T.line}`, borderRadius: 999,
+                        cursor: 'pointer', transition: 'border-color .22s, background .22s',
+                        fontFamily: T.sans,
+                      }}
+                      onMouseEnter={e => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.borderColor = 'rgba(176,85,47,0.5)'
+                        el.style.background = 'rgba(176,85,47,0.05)'
+                        const ic = el.querySelector<HTMLElement>('.sug-ic')
+                        if (ic) ic.style.color = T.clay
+                      }}
+                      onMouseLeave={e => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.borderColor = T.line
+                        el.style.background = T.raised
+                        const ic = el.querySelector<HTMLElement>('.sug-ic')
+                        if (ic) ic.style.color = T.inkFaint
+                      }}
+                    >
+                      <span className="sug-ic" style={{ color: T.inkFaint, flexShrink: 0, transition: 'color .22s', display: 'flex' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                          <path d={p.path}/>
+                        </svg>
+                      </span>
+                      <span style={{ fontSize: 13, lineHeight: 1.35, color: T.ink }}>{p.text}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Input area — always pinned to bottom */}
-        <div
-          className="flex-shrink-0 py-3 md:py-5 px-4 md:px-6 md:border-t"
-          style={{ borderColor: 'var(--border)', background: 'transparent' }}
-        >
+        {/* Composer */}
+        <div style={{ flexShrink: 0, padding: '14px 28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-
-          <div className="w-full max-w-3xl mx-auto flex flex-col gap-3">
-
-            {/* CSV file chip */}
-            {csvFile && (
-              <div className="flex items-center gap-2 max-w-2xl mx-auto w-full">
-                <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
-                  style={{ background: '#6B7A5C20', border: '1px solid #6B7A5C50', color: '#6B7A5C' }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 2h5l3 3v5a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                    <path d="M7 2v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                  </svg>
-                  <span>{csvFile.name}</span>
-                  <button onClick={() => setCsvFile(null)} className="ml-1 opacity-60 hover:opacity-100 transition-opacity">✕</button>
-                </div>
-                <span className="text-xs hidden md:inline" style={{ color: 'var(--text-muted)' }}>attached to this conversation</span>
+          {/* CSV chip */}
+          {csvFile && (
+            <div style={{ width: '100%', maxWidth: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 999, fontSize: 12, background: 'rgba(176,85,47,0.08)', border: `1px solid rgba(176,85,47,0.25)`, color: T.clayDeep }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 2h5l3 3v5a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M7 2v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                </svg>
+                {csvFile.name}
+                <button onClick={() => setCsvFile(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.inkFaint, padding: 0, marginLeft: 2, lineHeight: 1 }}>✕</button>
               </div>
-            )}
-
-            {csvError && (
-              <p className="text-xs max-w-2xl mx-auto w-full" style={{ color: '#B04040' }}>{csvError}</p>
-            )}
-
-            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileSelect} />
-            <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
-
-            {/* Pending image previews */}
-            {pendingImages.length > 0 && (
-              <div className="flex flex-wrap gap-2 max-w-2xl mx-auto w-full">
-                {pendingImages.map((img, i) => (
-                  <div key={i} className="relative">
-                    <img
-                      src={`data:${img.mediaType};base64,${img.data}`}
-                      alt={img.name}
-                      className="w-16 h-16 object-cover rounded-lg"
-                      style={{ border: '1px solid var(--border)' }}
-                    />
-                    <button
-                      onClick={() => setPendingImages(prev => prev.filter((_, j) => j !== i))}
-                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-xs"
-                      style={{ background: 'var(--text-primary)', color: 'var(--bg-surface)' }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Input box */}
-            <div
-              className="flex gap-2 md:gap-3 items-end rounded-2xl border px-3 md:px-4 py-3 max-w-2xl mx-auto w-full"
-              style={{
-                background: 'var(--bg-elevated)',
-                borderColor: 'var(--border)',
-                boxShadow: '0 4px 20px rgba(61,53,48,0.12)',
-              }}
-            >
-              {/* CSV upload button */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isStreaming}
-                title="Upload CSV"
-                className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-colors disabled:opacity-30"
-                style={{ color: 'var(--text-muted)', background: 'var(--bg-deep)' }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6B7A5C'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'}
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 2v6M4 5l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M2 10h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </button>
-
-              {/* Image upload button */}
-              <button
-                onClick={() => imageInputRef.current?.click()}
-                disabled={isStreaming}
-                title="Upload image"
-                className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-colors disabled:opacity-30"
-                style={{ color: pendingImages.length > 0 ? '#6B7A5C' : 'var(--text-muted)', background: 'var(--bg-deep)' }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6B7A5C'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = pendingImages.length > 0 ? '#6B7A5C' : 'var(--text-muted)'}
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <rect x="1" y="2.5" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                  <circle cx="4.5" cy="5.5" r="1" fill="currentColor"/>
-                  <path d="M1 9l3-3 2.5 2.5L9 6l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                value={input}
-                onChange={e => { setInput(e.target.value); autoResize() }}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about a budget, timeline, estimate, order, or client update…"
-                disabled={isStreaming}
-                className="flex-1 resize-none bg-transparent text-sm outline-none"
-                style={{ color: 'var(--text-primary)', lineHeight: '1.6', fontFamily: 'var(--font-inter), sans-serif', fontSize: '16px' }}
-              />
-              <button
-                onClick={() => sendMessage(input)}
-                disabled={!input.trim() || isStreaming}
-                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-25"
-                style={{ background: '#6B7A5C' }}
-              >
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 12V2M7 2L2.5 6.5M7 2L11.5 6.5" stroke="#F7F4F0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
             </div>
+          )}
 
-            {/* Prompt chips — 2 col on desktop, 1 col on mobile */}
-            {!hasMessages && (
-              <div className="hidden md:grid md:grid-cols-2 gap-2 mt-1 w-full max-w-2xl mx-auto">
-                {EXAMPLE_PROMPTS.map(prompt => (
+          {csvError && (
+            <p style={{ fontSize: 12, color: '#c0392b', margin: '0 0 8px', width: '100%', maxWidth: 700 }}>{csvError}</p>
+          )}
+
+          {/* Pending image previews */}
+          {pendingImages.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', maxWidth: 700, marginBottom: 8 }}>
+              {pendingImages.map((img, i) => (
+                <div key={i} style={{ position: 'relative' }}>
+                  <img
+                    src={`data:${img.mediaType};base64,${img.data}`}
+                    alt={img.name}
+                    style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, border: `1px solid ${T.line}` }}
+                  />
                   <button
-                    key={prompt}
-                    onClick={() => sendMessage(prompt)}
-                    disabled={isStreaming}
-                    className="text-xs px-4 py-2.5 rounded-xl border transition-all duration-200 disabled:opacity-40 cursor-pointer text-left"
-                    style={{
-                      borderColor: 'var(--border)',
-                      color: 'var(--text-muted)',
-                      background: 'var(--bg-elevated)',
-                      fontFamily: 'var(--font-inter), sans-serif',
-                    }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLButtonElement
-                      el.style.background = '#6B7A5C'; el.style.color = '#F7F4F0'; el.style.borderColor = '#6B7A5C'
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLButtonElement
-                      el.style.background = 'var(--bg-elevated)'; el.style.color = 'var(--text-muted)'; el.style.borderColor = 'var(--border)'
-                    }}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            )}
+                    onClick={() => setPendingImages(prev => prev.filter((_, j) => j !== i))}
+                    style={{ position: 'absolute', top: -6, right: -6, width: 16, height: 16, borderRadius: '50%', background: T.ink, color: T.raised, border: 'none', cursor: 'pointer', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          )}
 
-            {!hasMessages && (
-              <p className="text-center text-xs mt-1 hidden md:block" style={{ color: 'var(--text-muted)', opacity: 0.5 }}>
-                Enter to send · Shift+Enter for new line
-              </p>
-            )}
+          <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileSelect} />
+          <input ref={imageInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleImageSelect} />
+
+          {/* Composer pill */}
+          <div
+            style={{
+              width: '100%', maxWidth: 700,
+              background: T.raised, border: `1.5px solid ${T.line}`,
+              borderRadius: 999, padding: '6px 6px 6px 18px',
+              display: 'flex', alignItems: 'center', gap: 8,
+              boxShadow: '0 6px 18px rgba(58,42,36,0.06)',
+              transition: 'border-color .25s, box-shadow .25s',
+            }}
+            onFocusCapture={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.borderColor = 'rgba(176,85,47,0.55)'
+              el.style.boxShadow = '0 14px 36px rgba(58,42,36,0.14)'
+            }}
+            onBlurCapture={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.borderColor = T.line
+              el.style.boxShadow = '0 6px 18px rgba(58,42,36,0.06)'
+            }}
+          >
+            {/* Upload icon */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isStreaming}
+              title="Upload CSV or image"
+              style={{ width: 32, height: 32, borderRadius: 999, display: 'grid', placeItems: 'center', color: T.inkFaint, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background .2s, color .2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(44,38,33,0.06)'; (e.currentTarget as HTMLElement).style.color = T.ink }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; (e.currentTarget as HTMLElement).style.color = T.inkFaint }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M21 15l-5-5L5 21M12 4v12M8 8l4-4 4 4"/>
+              </svg>
+            </button>
+
+            {/* Image upload */}
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isStreaming}
+              title="Upload image"
+              style={{ width: 32, height: 32, borderRadius: 999, display: 'grid', placeItems: 'center', color: pendingImages.length > 0 ? T.clay : T.inkFaint, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background .2s, color .2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(44,38,33,0.06)'; (e.currentTarget as HTMLElement).style.color = T.ink }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; (e.currentTarget as HTMLElement).style.color = pendingImages.length > 0 ? T.clay : T.inkFaint }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </button>
+
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={input}
+              onChange={e => { setInput(e.target.value); autoResize() }}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about a budget, timeline, estimate, or client update…"
+              disabled={isStreaming}
+              style={{
+                flex: 1, border: 0, background: 'transparent', outline: 'none',
+                resize: 'none', fontFamily: T.sans, fontSize: 15.5, lineHeight: 1.5,
+                color: T.ink, maxHeight: 160, alignSelf: 'center', padding: '8px 0',
+              }}
+            />
+
+            <button
+              onClick={() => sendMessage(input)}
+              disabled={!input.trim() || isStreaming}
+              style={{
+                width: 36, height: 36, border: 0, borderRadius: 999,
+                background: input.trim() && !isStreaming ? T.clay : 'rgba(176,85,47,0.35)',
+                color: T.brandInk, display: 'grid', placeItems: 'center', flexShrink: 0,
+                cursor: input.trim() && !isStreaming ? 'pointer' : 'default',
+                transition: 'background .25s, transform .12s',
+              }}
+              onMouseEnter={e => { if (input.trim() && !isStreaming) (e.currentTarget as HTMLElement).style.background = T.clayDeep }}
+              onMouseLeave={e => { if (input.trim() && !isStreaming) (e.currentTarget as HTMLElement).style.background = T.clay }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 19V5M5 12l7-7 7 7"/>
+              </svg>
+            </button>
           </div>
+
+          <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 10 }}>Enter to send · Shift+Enter for new line</div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

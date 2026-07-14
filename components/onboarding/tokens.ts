@@ -1,0 +1,15 @@
+export const tokens = {
+  paper: "#F4EDE1",
+  panel: "#F8F3EA",
+  panelRaised: "#FCF8F0",
+  ink: "#2C2621",
+  inkSoft: "#6A6055",
+  clay: "#B0552F",
+  clayDeep: "#8F401F",
+  line: "rgba(44,38,33,0.16)",
+  brandBg: "#3A2A24",
+  brandInk: "#F6EFE3",
+  brandAccent: "#E0906A",
+  serif: `"Cormorant Garamond", Georgia, serif`,
+  sans: `"Instrument Sans", system-ui, sans-serif`,
+} as const

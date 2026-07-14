@@ -2,18 +2,31 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import '@/components/onboarding/onboarding.css'
+import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout'
+import { Button } from '@/components/onboarding/Button'
+import { TextField } from '@/components/onboarding/TextField'
+import { Select, ROLE_OPTIONS } from '@/components/onboarding/Select'
+import { OptionCard } from '@/components/onboarding/OptionCard'
+import { PlanCardFree, PlanCardTeam } from '@/components/onboarding/PlanCard'
+import { tokens as t } from '@/components/onboarding/tokens'
 import { supabase } from '@/lib/supabase'
+
+type Step = 'details' | 'plan'
+type PlanType = 'personal' | 'team'
 
 export default function WelcomePage() {
   const router = useRouter()
+  const [step, setStep] = useState<Step>('details')
   const [name, setName] = useState('')
   const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
+  const [plan, setPlan] = useState<PlanType>('personal')
+  const [seats, setSeats] = useState(3)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleFinish() {
     setLoading(true)
     setError('')
 
@@ -31,6 +44,23 @@ export default function WelcomePage() {
       return
     }
 
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('workspace_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.workspace_id) {
+      await supabase
+        .from('workspaces')
+        .update({
+          name: plan === 'team' && company ? company : 'Personal',
+          type: plan,
+          seats: plan === 'team' ? seats : 1,
+        })
+        .eq('id', profile.workspace_id)
+    }
+
     await fetch('/api/send-welcome', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -41,110 +71,60 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg-deep)' }}>
-      <div className="w-full max-w-sm">
-        <div className="flex justify-center mb-10">
-          <img
-            src="/logo.svg"
-            alt="The Trade"
-            style={{ height: '28px', width: 'auto', filter: 'brightness(0) saturate(100%) invert(18%) sepia(10%) saturate(800%) hue-rotate(340deg) brightness(90%)' }}
-          />
-        </div>
-
-        <h1 className="text-center mb-1" style={{ fontFamily: 'var(--font-playfair), serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)' }}>
-          Welcome to The Trade
-        </h1>
-        <p className="text-center text-sm mb-8" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
-          Tell us a bit about yourself to get started.
-        </p>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
-              Your name
-            </label>
-            <input
-              type="text"
-              placeholder="Jane Smith"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-lg text-sm outline-none"
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-inter), sans-serif',
-                fontSize: '16px',
-              }}
-            />
+    <>
+      {step === 'details' && (
+        <OnboardingLayout current="details">
+          <div>
+            <div style={{ fontSize: 10.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: t.clay, marginBottom: 10, fontFamily: t.sans }}>
+              Welcome
+            </div>
+            <h1 style={{ fontFamily: t.serif, fontWeight: 500, fontSize: 38, lineHeight: 1.04, letterSpacing: '-0.01em', margin: 0, color: t.ink }}>
+              Tell us who you are.
+            </h1>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
-              Company
-            </label>
-            <input
-              type="text"
-              placeholder="Marea Clark Interiors"
-              value={company}
-              onChange={e => setCompany(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg text-sm outline-none"
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-inter), sans-serif',
-                fontSize: '16px',
-              }}
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22, maxWidth: 400 }}>
+            <TextField label="Full name" placeholder="Jordan Ellery" value={name} onChange={setName} required />
+            <TextField label="Company name" placeholder="Ellery Studio" value={company} onChange={setCompany} />
+            <Select label="Your role" placeholder="Select your role" options={ROLE_OPTIONS} value={role} onChange={setRole} />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
-              Role
-            </label>
-            <select
-              value={role}
-              onChange={e => setRole(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg text-sm outline-none"
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                color: role ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontFamily: 'var(--font-inter), sans-serif',
-                fontSize: '16px',
-              }}
-            >
-              <option value="" disabled>Select your role</option>
-              <option value="interior_designer">Interior Designer</option>
-              <option value="contractor">General Contractor</option>
-              <option value="architect">Architect</option>
-              <option value="project_manager">Project Manager</option>
-              <option value="owner">Business Owner</option>
-              <option value="other">Other</option>
-            </select>
+          <div style={{ marginTop: 2 }}>
+            <Button withArrow onClick={() => name ? setStep('plan') : undefined} disabled={!name}>
+              Continue
+            </Button>
+          </div>
+        </OnboardingLayout>
+      )}
+
+      {step === 'plan' && (
+        <OnboardingLayout current="plan">
+          <div>
+            <div style={{ fontSize: 10.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: t.clay, marginBottom: 10, fontFamily: t.sans }}>
+              Choose plan
+            </div>
+            <h1 style={{ fontFamily: t.serif, fontWeight: 500, fontSize: 34, lineHeight: 1.04, letterSpacing: '-0.01em', margin: 0, color: t.ink }}>
+              How will you use The Trade?
+            </h1>
           </div>
 
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
+          <div style={{ display: 'flex', gap: 14 }}>
+            <OptionCard title="Just me" desc="Personal account" selected={plan === 'personal'} onSelect={() => setPlan('personal')} />
+            <OptionCard title="My team" desc="Shared workspace & seats" selected={plan === 'team'} onSelect={() => setPlan('team')} />
+          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-lg text-sm font-medium transition-opacity mt-2"
-            style={{
-              background: 'var(--text-primary)',
-              color: 'var(--bg-surface)',
-              fontFamily: 'var(--font-inter), sans-serif',
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            {loading ? 'Getting things ready…' : 'Get started'}
-          </button>
-        </form>
-      </div>
-    </div>
+          {plan === 'personal' ? <PlanCardFree /> : <PlanCardTeam seats={seats} onSeatsChange={setSeats} />}
+
+          {error && <p style={{ fontSize: 13, color: '#c0392b', fontFamily: t.sans, margin: 0 }}>{error}</p>}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <Button variant="secondary" onClick={() => setStep('details')}>Back</Button>
+            <Button withArrow onClick={handleFinish} disabled={loading}>
+              {loading ? 'Setting up…' : 'Enter The Trade'}
+            </Button>
+          </div>
+        </OnboardingLayout>
+      )}
+    </>
   )
 }

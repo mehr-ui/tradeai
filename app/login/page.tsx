@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import '@/components/onboarding/onboarding.css'
+import { tokens as t } from '@/components/onboarding/tokens'
+import { AnimatedField } from '@/components/onboarding/AnimatedField'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
@@ -22,120 +23,137 @@ export default function LoginPage() {
       : await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      console.log('Auth error:', error)
-      setError(typeof error === 'string' ? error : (error as any).message ?? JSON.stringify(error))
+      setError((error as any).message ?? 'Something went wrong.')
     } else {
-      window.location.href = isSignUp ? '/welcome' : '/'
+      window.location.href = isSignUp ? `/check-email?email=${encodeURIComponent(email)}` : '/'
     }
-
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-deep)' }}>
-      <div className="w-full max-w-sm px-8 py-10 rounded-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '480px 1fr', minHeight: '100vh' }}>
+      {/* Left — form panel */}
+      <div style={{
+        position: 'relative', background: t.panel,
+        padding: '52px 60px', display: 'flex', flexDirection: 'column',
+        borderRight: `1px solid ${t.line}`,
+      }}>
         {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <img
-            src="/logo.svg"
-            alt="The Trade"
-            style={{ height: '28px', width: 'auto', filter: 'brightness(0) saturate(100%) invert(18%) sepia(10%) saturate(800%) hue-rotate(340deg) brightness(90%)' }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, color: t.ink }}>
+          <span style={{ width: 32, height: 32, border: `1.5px solid ${t.line}`, borderRadius: '50%', display: 'grid', placeItems: 'center' }}>
+            <span style={{ width: 11, height: 11, background: t.clay, borderRadius: '50%' }} />
+          </span>
+          <span style={{ fontFamily: t.serif, fontSize: 23, fontWeight: 600 }}>The&nbsp;Trade</span>
         </div>
 
-        {/* Google sign in */}
-        <button
-          type="button"
-          onClick={async () => {
-            await supabase.auth.signInWithOAuth({
-              provider: 'google',
-              options: { redirectTo: `${window.location.origin}/auth/callback` }
-            })
-          }}
-          className="w-full flex items-center justify-center gap-3 py-3 rounded-lg text-sm font-medium transition-opacity mb-4"
-          style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-inter), sans-serif',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-            <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
-          </svg>
-          Continue with Google
-        </button>
+        {/* Form content */}
+        <div style={{ margin: 'auto 0', display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 360 }}>
+          <div>
+            <div style={{ fontSize: 10.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: t.clay, marginBottom: 12, fontFamily: t.sans }}>
+              {isSignUp ? 'Create account' : 'Welcome back'}
+            </div>
+            <h1 style={{ fontFamily: t.serif, fontWeight: 500, fontSize: 46, lineHeight: 1.02, letterSpacing: '-0.01em', margin: 0, color: t.ink }}>
+              {isSignUp ? 'Join\nThe Trade.' : 'Step back\ninto the studio.'}
+            </h1>
+            <p style={{ fontSize: 14.5, color: t.inkSoft, lineHeight: 1.6, margin: '14px 0 0', fontFamily: t.sans }}>
+              Your AI partner for the trades — client emails, budgets, change orders, vendor follow-ups.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-          <span className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>or</span>
-          <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className="w-full px-4 py-3 rounded-lg text-sm outline-none"
-            style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-inter), sans-serif',
-              fontSize: '16px',
+          {/* Google */}
+          <button
+            type="button"
+            className="tt-goog"
+            onClick={async () => {
+              await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: `${window.location.origin}/auth/callback` }
+              })
             }}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className="w-full px-4 py-3 rounded-lg text-sm outline-none"
             style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-inter), sans-serif',
-              fontSize: '16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 11,
+              height: 50, background: 'transparent', border: `1.5px solid ${t.line}`,
+              borderRadius: 2, cursor: 'pointer', fontFamily: t.sans, fontSize: 14.5,
+              fontWeight: 500, color: t.ink,
             }}
-          />
+          >
+            <svg width="18" height="18" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            Continue with Google
+          </button>
 
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: t.inkSoft, fontSize: 11, letterSpacing: '0.16em', fontFamily: t.sans }}>
+            <div style={{ flex: 1, height: 1, background: t.line }} />OR<div style={{ flex: 1, height: 1, background: t.line }} />
+          </div>
 
+          {/* Email field */}
+          <label className="tt-field" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span className="tt-label">Email</span>
+            <input className="tt-input" type="email" placeholder="you@studio.com" value={email} onChange={e => setEmail(e.target.value)} required />
+          </label>
+
+          {/* Password field */}
+          <label className="tt-field" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span className="tt-label">Password</span>
+              {!isSignUp && <a href="#" style={{ fontSize: 12.5, color: t.clay, fontFamily: t.sans }}>Forgot?</a>}
+            </div>
+            <input className="tt-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+          </label>
+
+          {error && <p style={{ fontSize: 13, color: '#c0392b', fontFamily: t.sans, margin: 0 }}>{error}</p>}
+
+          {/* Submit */}
           <button
             type="submit"
+            onClick={handleSubmit}
             disabled={loading}
-            className="w-full py-3 rounded-lg text-sm font-medium transition-opacity"
+            className="tt-btn tt-btn--primary"
             style={{
-              background: 'var(--text-primary)',
-              color: 'var(--bg-surface)',
-              fontFamily: 'var(--font-inter), sans-serif',
-              opacity: loading ? 0.6 : 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              height: 50, background: t.clay, border: 0, borderRadius: 2, cursor: loading ? 'not-allowed' : 'pointer',
+              fontFamily: t.sans, fontSize: 15, fontWeight: 600, color: t.panel,
+              opacity: loading ? 0.6 : 1, marginTop: 2,
             }}
           >
             {loading ? 'Please wait…' : isSignUp ? 'Create account' : 'Sign in'}
+            {!loading && (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M13 6l6 6-6 6"/>
+              </svg>
+            )}
           </button>
-        </form>
+        </div>
 
-        <p className="text-center text-sm mt-6" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
-          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+        {/* Footer */}
+        <div style={{ fontSize: 13.5, color: t.inkSoft, fontFamily: t.sans }}>
+          {isSignUp ? 'Already have an account? ' : 'New to The Trade? '}
           <button
             onClick={() => { setIsSignUp(!isSignUp); setError('') }}
-            className="underline"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, color: t.clay, fontFamily: t.sans, fontSize: 13.5, padding: 0 }}
           >
-            {isSignUp ? 'Sign in' : 'Sign up'}
+            {isSignUp ? 'Sign in' : 'Request access'}
           </button>
-        </p>
+        </div>
+      </div>
+
+      {/* Right — brand panel */}
+      <div style={{ position: 'relative', overflow: 'hidden', background: t.brandBg }}>
+          <AnimatedField warmth={1.2} glow={0.4} />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 60, color: t.brandInk }}>
+          <div style={{ width: 52, height: 1.5, background: 'rgba(246,239,227,0.7)', marginBottom: 24 }} />
+          <div style={{ fontFamily: t.serif, fontStyle: 'italic', fontWeight: 500, fontSize: 42, lineHeight: 1.08, maxWidth: 560, letterSpacing: '-0.005em', color: t.brandInk }}>
+            Every purchase order, every vendor thread, every schedule — held in one calm, intelligent room.
+          </div>
+          <div style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(246,239,227,0.62)', marginTop: 22, fontFamily: t.sans }}>
+            Built for interior design &amp; construction
+          </div>
+        </div>
       </div>
     </div>
   )
