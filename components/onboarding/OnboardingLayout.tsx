@@ -14,15 +14,8 @@ export function OnboardingLayout({ current, steps = ONBOARDING_STEPS, children }
         padding: '40px 34px', display: 'flex',
         flexDirection: 'column', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <span style={{
-            width: 32, height: 32,
-            border: `1.5px solid rgba(246,239,227,0.85)`,
-            borderRadius: '50%', display: 'grid', placeItems: 'center',
-          }}>
-            <span style={{ width: 11, height: 11, background: t.clay, borderRadius: '50%' }} />
-          </span>
-          <span style={{ fontFamily: t.serif, fontSize: 20, fontWeight: 600 }}>The&nbsp;Trade</span>
+        <div>
+          <img src="/logo.svg" alt="The Trade" style={{ height: 22, width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
         </div>
         <Stepper steps={steps} current={current} />
       </aside>

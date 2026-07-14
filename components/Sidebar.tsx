@@ -59,15 +59,7 @@ export default function Sidebar({
 
       {/* Wordmark */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '4px 8px 22px' }}>
-        <span style={{
-          width: 28, height: 28, border: `1.5px solid ${T.line}`, borderRadius: '50%',
-          display: 'grid', placeItems: 'center', flexShrink: 0,
-        }}>
-          <span style={{ width: 9, height: 9, background: T.clay, borderRadius: '50%' }} />
-        </span>
-        <span style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 600, letterSpacing: '0.01em', color: T.ink }}>
-          The&nbsp;Trade
-        </span>
+        <img src="/logo.svg" alt="The Trade" style={{ height: 22, width: 'auto', display: 'block' }} />
         {isMobile && onClose && (
           <button
             onClick={onClose}

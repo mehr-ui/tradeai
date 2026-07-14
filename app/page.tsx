@@ -298,10 +298,8 @@ export default function Home() {
               <div style={{ width: '100%', maxWidth: 720, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
                 {/* Logotype */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 16 }}>
-                  <span style={{ width: 40, height: 1, background: T.line }} />
-                  <span style={{ fontSize: 10.5, letterSpacing: '0.34em', textTransform: 'uppercase', color: T.clay }}>The Trade</span>
-                  <span style={{ width: 40, height: 1, background: T.line }} />
+                <div style={{ marginBottom: 16 }}>
+                  <img src="/logo.svg" alt="The Trade" style={{ height: 28, width: 'auto', display: 'block' }} />
                 </div>
 
                 <h1 style={{ fontFamily: T.serif, fontWeight: 500, fontSize: 40, lineHeight: 1.05, letterSpacing: '-0.01em', margin: 0, textAlign: 'center', color: T.ink }}>

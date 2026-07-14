@@ -39,11 +39,8 @@ export default function LoginPage() {
         borderRight: `1px solid ${t.line}`,
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 13, color: t.ink }}>
-          <span style={{ width: 32, height: 32, border: `1.5px solid ${t.line}`, borderRadius: '50%', display: 'grid', placeItems: 'center' }}>
-            <span style={{ width: 11, height: 11, background: t.clay, borderRadius: '50%' }} />
-          </span>
-          <span style={{ fontFamily: t.serif, fontSize: 23, fontWeight: 600 }}>The&nbsp;Trade</span>
+        <div>
+          <img src="/logo.svg" alt="The Trade" style={{ height: 36, width: 'auto', display: 'block' }} />
         </div>
 
         {/* Form content */}
